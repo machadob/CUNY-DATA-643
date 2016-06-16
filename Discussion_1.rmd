@@ -1,22 +1,40 @@
 ---
-title: "Recommender Systems"
+title: "Discussion 1: Scenario Design"
 author: "Burton Machado"
 date: "June 14, 2016"
 output: pdf_document
 ---
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+#WALMART
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+We will use Walmart’s website as an example for this scenario analysis.
 
-```{r}
-summary(cars)
-```
+Walmart is a retail site and the users are buyers who want to preview and/or buy the products that Walmart offers.
 
-You can also embed plots, for example:
+#Users:
 
-```{r, echo=FALSE}
-plot(cars)
-```
+The users are primarily interested in buying one or more products that Walmart has to offer. They could be registered or anonymous.
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+#User Goals:
+The users would have an expectation of getting a great deal/discount on the products they wish to buy. They would also be interested in products that are exclusively offered by Walmart. Some of the users use the Walmart site to just compare prices with other sites (like amazon.com) to check which site offers the least price and other perks (e.g. free shipping). 
+
+#How to enable the users to accomplish their goals:
+For the users to ultimately get what they want, they should be first be able to quickly find the items they are looking for. So a good search functionality is vital for the user to find what he/she wants. Along with the search, we could also provide the user with additional help by displaying items that we think the user might be interested in. This can be done using the previous shopping history of the user along with the user profile to display products that the user could be interested in. For users who are impulse buyers, they might not have decided on what they want. These users could be enticed to buy something if we manage to display products they are interested in. We could again tap into the user’s history and profile to present items of interest to the user.  We could either use user to user or item to item Collaborative filtering to accomplish this. We could also use clustering models to find similar customers.
+
+
+#What does Walmart do right now?
+
+Walmart remembers totally anonymous users after they visit the site for the first time. The site displays “items you may like”,  “items on which you can save”,  and “Items inspired by your browsing history”. It probably uses http cookies to accomplish this. As the user browses through the web site the recommendation engine kicks in and customizes the items in those categories. 
+It also looks like Walmart might be using third party data to suggest items similar to those that the user might have bought from other web sites. I had several specific items show up that I had bought from amazon and other web sites.
+
+Walmart uses Neo4j ( a graph database) to query customer past purchases and any new interests shown in the current web session. This is because combining session data and historical data is very easy in a graph database. 
+Walmart.com also uses manual assignments. For e.g. it manually assigns movies to specific categories such as science fiction or African-American culture, and the company’s internally developed software then generates links guiding shoppers to other movies in that group. This can result in human errors causing wrong recommendations. This aspect could perhaps be automated.
+
+Walmart does extensive mining of its cash register receipt data to use for recommendations.
+Walmart prefers to use bundle recommendations instead if single item recommendation. It uses a matrix based bundle recommendation algorithm.
+
+#How to improve the recommendations:
+
+The site's recommendation capbilities could be increased by:
+
+One way Walmart can increase it's recommendation capabilities is by including upselling and cross-selling. An example of upselling is showing a more expensive version of a product which results in greater profit margins. An example of cross-selling is selling a tie when a user buys a dress shirt.
