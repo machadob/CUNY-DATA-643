@@ -1,0 +1,162 @@
+---
+title: "DATA 643 Project 1"
+author: "Burton Machado"
+date: "June 19, 2016"
+output: pdf_document
+---
+
+**We will build a recommender system to recommend books to users using user-user collaborative filtering.**
+
+**Following is the data that is used. This is included in the attached Project_1.csv file.**
+
+Reviewer,Learn Java,Oracle PL SQL,R in Action,Learning Python,Learn MongoDB,Scala in Action
+
+John,4,,5,,3,
+
+James,5,,4,3,4,3
+
+Debbie,3,2,,,3,2
+
+Sarah,4,3,3,,3,
+
+Steven,3,,,3,,4
+
+Sergey,4,,4,,,3
+
+Brad,,3,,4,,4
+
+Allison,5,,5,,3,4
+
+Megh,,4,,4,,3
+
+Alan,4,,4,,3,
+
+**As shown above, we have 10 users and 6 books to recommend. This is a artificially created "toy" data set.**
+
+We will use the dataset and create the intermediate data structures to build our user-user recommender system. Specifically we will build the following intermediate data structures and print them.
+
+1) The initial data frame by reading the csv data file.
+
+2) The data frame with added user means and book means.
+
+3) A data frame containing  the mean centered values.
+
+4) The mean centered data frame with the distance and user means.
+
+5) The similarity matrix.
+
+We can then use these data structure to predict the missing ratings of users.
+
+As an example, we will calculate the predicted rating for Sarah for the book 'Scala in Action'
+
+Please note that a datafarme will be broken into two for display purposes peices if it is too wide to display on the page.
+
+
+```{r warning=FALSE, echo=FALSE}
+library(knitr)
+library("recommenderlab")
+```
+
+```{r warning=FALSE}
+
+# Please set the working directory to the location of  the 'Project_1.csv' file.
+setwd('/Users/burton/001-Semester_05_CUNY/643_Recommender_Systems/Week_01')
+# Create a data frame from the csv file.
+df <- read.csv('Project_1.csv', header = TRUE, stringsAsFactors = FALSE)
+# We use kable function from knitr to format and print a dataframe. If a dataframe is too wide to 
+# fit on the page, we split it into multiple tables.
+kable(df[,1:4])
+kable(df[,5:7])
+# Here we will calculate the user means and bind them to the data frame
+userMeans <- c()
+for(i in 1:nrow(df)){
+  rowWithoutNA <- df[i, 2:ncol(df)][!is.na(df[i, 2:ncol(df)])]
+  userMeans <- append(userMeans, round(mean(rowWithoutNA), 2))
+}
+df <- cbind(df, userMeans)
+
+# Here we will calculate the Book means and bind them to the data frame
+bookMeans <- c(NA)
+for(i in 2:ncol(df)){
+  colWithoutNA <- df[,i][!is.na(df[,i])]
+  bookMeans <- append(bookMeans, round(mean(colWithoutNA), 2))
+}
+df <- rbind(df, bookMeans)
+df[nrow(df),1] <- 'bookmeans'
+# Print the dataframe along with the user-means and book-means
+kable(df[,1:4])
+kable(df[,5:8])
+
+# We now calculate the mean-centered values and create another dataframe.
+df_Mean_Centered <- df[,2:ncol(df)]-df$userMeans
+df_Mean_Centered <- df_Mean_Centered[,1:ncol(df_Mean_Centered)-1]
+df_Mean_Centered <- df_Mean_Centered[1:nrow(df_Mean_Centered)-1,]
+# Print the mean-centered dataframe in a table.
+kable(df_Mean_Centered)
+
+# Calculate the distances
+distance <- c()
+for( i in 1:nrow(df_Mean_Centered)){
+  distance <- append(distance, sum(df_Mean_Centered[i,]**2, na.rm = TRUE)**.5)
+}
+#Create mean centered data frame with the distance
+df_Mean_Centered_and_Distance <- cbind(df_Mean_Centered, distance)
+df_Mean_Centered_and_Distance <- cbind(df_Mean_Centered_and_Distance, userMeans=df$userMeans[1:length(df$userMeans)-1])
+
+#Construct the similarity matrix
+similarity_Matrix <- data.frame(names=df[1:nrow(df)-1,1])
+for(i in 1:nrow(df_Mean_Centered_and_Distance)){
+  temp <- c()
+  for(j in 1:nrow(df_Mean_Centered_and_Distance)){
+    product <- sum(df_Mean_Centered_and_Distance[i,1:6]*df_Mean_Centered_and_Distance[j,1:6],na.rm = TRUE)/
+      (df_Mean_Centered_and_Distance$distance[i]*df_Mean_Centered_and_Distance$distance[j])
+    temp <- append(temp, product)
+  }
+  similarity_Matrix <- cbind(similarity_Matrix, temp)
+}
+names(similarity_Matrix)<-c('names', as.character(similarity_Matrix[,1]))
+  
+df_Mean_Centered_and_Distance <- cbind(Reviewer=df[1:10,1],df_Mean_Centered_and_Distance)
+#df_Mean_Centered_and_Distance
+kable(df_Mean_Centered_and_Distance[,1:5])
+kable(df_Mean_Centered_and_Distance[,6:9])
+#similarity_Matrix
+kable(similarity_Matrix[,1:6])
+kable(similarity_Matrix[,7:11])
+  
+  # We will Rate scala in action for Sarah.
+  
+# The closest two users to Sarah are James(0.5520524) and Allison(0.4787136)
+  
+similarity_Sarah <- sort(similarity_Matrix$Sarah,decreasing = TRUE)
+  
+  
+# We take the sum of ratings of James and Allison multiplied by their similarity to Sarah, 
+# then divide by the sum of their similarities to Sarah.
+  
+rating_Sarah_Scala <- similarity_Sarah[2]*df_Mean_Centered$Scala.in.Action[2] + similarity_Sarah[3]*df_Mean_Centered$Scala.in.Action[8] + df_Mean_Centered_and_Distance$userMeans[4]
+```
+
+#**The predicted rating for Sarah for the book 'Scala in Action' is `r round(rating_Sarah_Scala,0)`**
+
+**Now we will try to predict rating for Sarah for the book 'Scala in Action' using the recommenderlab package.**
+
+```{r}
+mm<-as.matrix(df[1:nrow(df),2:ncol(df)])
+rr<-as(mm, "realRatingMatrix")
+
+rec=Recommender(rr[1:10],method="UBCF", param=list(normalize = "Z-score",method="Cosine",nn=5))
+recom <- predict(rec, rr[1:10], type="ratings")
+recom_list <- as(recom, "list")
+```
+
+#**The predicted rating for Sarah for the book 'Scala in Action' using the recommenderlab package is  `r round(recom_list[[4]][[2]],0)`. The ratings from our code and from the package match.**
+
+Note that in the list above Sarah is the 4th user and 'Scala in Action' is the 2nd predicted entry, hence the indexes 4,2
+
+The contents of the list recom_list are displayed below.
+
+```{r}
+as(recom, "list")
+
+```
