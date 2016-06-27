@@ -1,0 +1,168 @@
+---
+output: pdf_document
+---
+
+
+```{r echo=FALSE, warning=FALSE}
+invisible(dev.off())
+library(pander)
+set.seed(1)
+library(recommenderlab)
+library(ggplot2)
+```
+
+#PROJECT_02
+
+#**The function "evaluateModel" below will evaluate a model based on the Evaluation set and model type.The Evaluation set can be one of type "split", "bootstrap" or "cross-validation".The Model type will be either "IBCF" or "UBCF".This function will output the Accuracy, Confusion Matrix, ROC curve and Pecision-recall curve for each Evalation set and Model type.**
+
+```{r}
+evaluateModel <- function(evaluation_set, model_type){
+model_parameters <- NULL
+
+eval_recommender <- Recommender(data = getData(evaluation_set, "train"),
+                                method = model_type,
+                                parameter = NULL)
+
+items_to_recommend <- 10
+
+eval_prediction <- predict(object = eval_recommender,
+                           newdata = getData(evaluation_set, "known"),
+                           n = items_to_recommend,
+                           type = "ratings")
+class(eval_prediction)
+
+qplot(rowCounts(eval_prediction)) +
+  geom_histogram(binwidth = 10) +
+  ggtitle("Distribution of movies per user")
+
+eval_accuracy <- calcPredictionAccuracy(
+  x = eval_prediction,
+  data = getData(evaluation_set, "unknown"),
+  byUser = TRUE)
+
+pander(head(eval_accuracy))
+
+qplot(eval_accuracy[, "RMSE"]) +
+  geom_histogram(binwidth = 0.1) +
+  ggtitle("Distribution of the RMSE by user")
+
+eval_accuracy <- calcPredictionAccuracy(
+  x = eval_prediction,
+  data = getData(evaluation_set, "unknown"),
+  byUser = FALSE)
+eval_accuracy
+
+results <- evaluate(x = evaluation_set,
+                    method = model_type,
+                    n = seq(10, 100, 10))
+class(results)
+
+print(head(getConfusionMatrix(results)[[1]]))
+pander(head(getConfusionMatrix(results)[[1]]))
+
+columns_to_sum <- c("TP", "FP", "FN", "TN")
+indices_summed <- Reduce("+", getConfusionMatrix(results))[, columns_to_sum]
+print(indices_summed)
+pander(head(indices_summed))
+
+plot(results,
+     annotate = TRUE,
+     main = "ROC curve")
+
+plot(results, "prec/rec",
+     annotate = TRUE,
+     main = "Precision-recall")
+
+}
+```
+
+#**We will now use the above function to test various evaluations set types using the  IBCF ans UBCF methods.**
+
+**_____________________________________________________________**
+
+#**We first evaluate the models for the evaluation method "split" using "IBCF"" and "UBCF"**
+
+```{r}
+data(MovieLense)
+ratings_movies <- MovieLense[rowCounts(MovieLense) > 50,
+                             colCounts(MovieLense) > 100]
+
+evaluationSet <- evaluationScheme(data = ratings_movies,
+                              method = "split",
+                              train = 0.9,
+                              given = 10,
+                              goodRating = 3,
+                              k = 1)
+evaluateModel(evaluationSet, "IBCF")
+evaluateModel(evaluationSet, "UBCF")
+```
+
+**_____________________________________________________________**
+
+#**We then evaluate the models for the evaluation method "bootstrap" using "IBCF"" and "UBCF"**
+
+```{r}
+evaluationSet <- evaluationScheme(data = ratings_movies,
+                              method = "bootstrap",
+                              train = 0.9,
+                              given = 10,
+                              goodRating = 3,
+                              k = 1)
+evaluateModel(evaluationSet, "IBCF")
+evaluateModel(evaluationSet, "UBCF")
+```
+
+**_____________________________________________________________**
+
+#**We then evaluate the models for the evaluation method "cross-validation" using "IBCF"" and "UBCF"**
+
+```{r}
+evaluationSet <- evaluationScheme(data = ratings_movies,
+                              method = "cross-validation",
+                              k = 10,
+                              given = 10,
+                              goodRating = 3)
+evaluateModel(evaluationSet, "IBCF")
+evaluateModel(evaluationSet, "UBCF")
+
+```
+
+**_____________________________________________________________**
+
+#**We will now  evaluate the models for "cosine" and  "pearson distances" using "IBCF"**
+
+```{r}
+
+models_distance_based <- list(
+  IBCF_cos = list(name = "IBCF", param = list(method = "cosine")),
+  IBCF_cor = list(name = "IBCF", param = list(method = "pearson")),
+  random = list(name = "RANDOM", param=NULL)
+)
+
+results <- evaluate(x = evaluationSet,
+                    method = models_distance_based,
+                    n = c(1 ,5, seq(10,100,10)))
+
+average <- lapply(results, avg)
+```
+
+**Results with Cosine distance**
+
+```{r}
+head(average$IBCF_cos[, 5:8])
+```
+
+**Results with Pearson distance**
+
+```{r}
+head(average$IBCF_cor[, 5:8])
+```
+
+#**We Observe that the "cosine distances"" are better than "pearson distances" for IBCF**
+
+
+**_____________________________________________________________**
+
+#CONCLUSION: **From the above analysis and the result parameters (Precision, Area under the ROC curve etc.), we can observe that the in general UBCF is the better of the two methods.**
+
+**_____________________________________________________________**
