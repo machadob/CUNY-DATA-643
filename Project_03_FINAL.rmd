@@ -31,7 +31,7 @@ movie_matrix
 image(movie_matrix, main = "Raw Ratings")  
 ```
 
-**From the heat map we can see that the movie matrix has 4 clusters representing the 4 dimensions. The dimensions are groupings of the movies. When we do SVD, one of the dimensions will drop off and we will be left with only 3 dimensions.**
+**From the heat map we can see that the movie matrix has 4 clusters representing the 4 dimensions (The 4 Yellowish rectangles). The dimensions are groupings of the movies. When we do SVD, one of the dimensions will drop off and we will be left with only 3 dimensions.**
 
 **We will now apply SVD to the resulting matrix.**
 
@@ -98,7 +98,7 @@ as(rating_matrix_norm, "matrix")
 image(rating_matrix, main = "Raw Ratings")     
 ```
 
-**From the heat map of the ratings matrix after SVD, we can see that one of the Dimensions ahs been dropped and we are reduced to 3 dimensions from  the original 4. We will observe the same for the normalized matrix later.**
+**From the heat map of the ratings matrix after SVD, we can see that one of the Dimensions ahs been dropped and we are reduced to 3 dimensions (The BLACK rectangles) from  the original 4. We will observe the same for the normalized matrix later.**
 
 **Following is the image map of the Normalized Ratings Matrix**
 
@@ -107,7 +107,7 @@ image(rating_matrix, main = "Raw Ratings")
 image(rating_matrix_norm, main = "Normalized Ratings")
 ```
 
-**From the heat map of the Normalized ratings matrix after SVD, we can see that one of the Dimensions ahs been dropped and we are reduced to 3 dimensions from  the original 4.**
+**From the heat map of the Normalized ratings matrix after SVD, we can see that one of the Dimensions ahs been dropped and we are reduced to 3 dimensions (The RED rectangles) from  the original 4.**
 
 **Now we can proceed to build the recommender.**
 
@@ -121,4 +121,5 @@ getModel(rec)$nn
 recom <- predict(rec, rating_matrix[1:nrow(rating_matrix)], type="ratings")
 ```
 
+**We can use the recommender above to do predictions.**
 
