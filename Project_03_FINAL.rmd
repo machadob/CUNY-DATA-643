@@ -1,0 +1,124 @@
+---
+output: pdf_document
+---
+
+
+```{r echo=FALSE, warning=FALSE}
+invisible(dev.off())
+library(pander)
+library(recommenderlab)
+library(ggplot2)
+set.seed(1)
+```
+
+#PROJECT_03 -- (SVD) Singular Value Decomposition.
+
+**We start with an artificial dataset representing users and movies. The dataset contains movies as the items and each row represents the rating that a user gives to a particular movie. The users are u1 through u14 and movies are named as m1 to m12. So there are 14 users and 12 movies. The ratio of users to movies is not particularly high, but is enough to demonstrate the power of SVD. Note that we have rated the movies from 0 to 5 instead of 1 to 5. This makes it convenient to work with matrices. The zero could be treated as "not-rated" instead as a rating of zero.**
+  
+**Note that we have arranged for different groups of users in the dataset to rate a particular set of movies. This way a particular group of movies will form a unique feature, and SVD will be able to identify that feature. There are 4 clusters of ratings involving 4 sets of users. We will see these clusters in the raw matrix as well as the heat map.**
+
+```{r}
+setwd('/Users/burton/001-Semester_05_CUNY/643_Recommender_Systems/Week_03/')
+movies <- read.csv('my_movies.csv')
+movies
+```
+
+**We will convert the movie dataframe to a matrix, so that we can do SVD. We will drop the first column with the usernames and ouput the resulting matrix.**
+
+```{r}
+movie_matrix <- as.matrix(movies[,2:ncol(movies)])
+movie_matrix
+image(movie_matrix, main = "Raw Ratings")  
+```
+
+**From the heat map we can see that the movie matrix has 4 clusters representing the 4 dimensions. The dimensions are groupings of the movies. When we do SVD, one of the dimensions will drop off and we will be left with only 3 dimensions.**
+
+**We will now apply SVD to the resulting matrix.**
+
+```{r}
+svd_movie_matrix <- svd(movie_matrix)
+#head(svd_movie_matrix)
+#svd_movie_matrix$u%*%diag(svd_movie_matrix$d)%*%t(svd_movie_matrix$v)
+```
+
+**We will now print the the U matrix**
+
+```{r}
+svd_movie_matrix$u
+```
+
+**We will now print the the Sigma (or diagonal-d) matrix**
+
+```{r}
+svd_movie_matrix$d
+```
+
+**We will now print the the V matrix**
+
+```{r}
+svd_movie_matrix$v
+```
+
+**We will assume (arbitrarily) that we will cutoff the diagonal matrix at 80% weight. That is, we will keep the elements that contribute 80% of the weight and make the remaining ones zero. We will then reconstruct the original matrix with reduced dimensions. To start with, we will equate to zero any values below 10 in  the diagonal and check if the remaining values contribute >= 80% of the weight. **
+
+```{r}
+new_diagonal <- ifelse(svd_movie_matrix$d<10,0,svd_movie_matrix$d)
+```
+
+The weight of the new diagonal compared to the original one is **`r (sum(new_diagonal)/sum(svd_movie_matrix$d))*100`**
+
+**The remaining values in the diagonal matrix do contribute 80% of the weight. So we can use this new diagonal tt reconstruct a reduced version of the original matrix.**
+
+**We will now reconstruct the original matrix with reduced dimensions. The  recontructed movie matrix after dimension reduction is as follows**
+
+```{r}
+new_movie_matrix <- svd_movie_matrix$u%*%diag(new_diagonal)%*%t(svd_movie_matrix$v)
+new_movie_matrix
+```
+
+**We can observe that the 4th, 5th and 6th colum on the original movie matrix has been reduced to zero after the transformation with SVD.**
+
+**We will now create a Ratings matrix out of the new matrix generated through SVD.**
+
+```{r}
+rating_matrix <- as(new_movie_matrix, "realRatingMatrix")
+as(rating_matrix, "matrix") 
+```
+
+**We will now normalize the Ratings matrix.**
+
+```{r}
+rating_matrix_norm <- normalize(rating_matrix)
+as(rating_matrix_norm, "matrix") 
+```
+
+**Following is the image map of the Ratings Matrix**
+
+```{r}
+image(rating_matrix, main = "Raw Ratings")     
+```
+
+**From the heat map of the ratings matrix after SVD, we can see that one of the Dimensions ahs been dropped and we are reduced to 3 dimensions from  the original 4. We will observe the same for the normalized matrix later.**
+
+**Following is the image map of the Normalized Ratings Matrix**
+
+
+```{r}
+image(rating_matrix_norm, main = "Normalized Ratings")
+```
+
+**From the heat map of the Normalized ratings matrix after SVD, we can see that one of the Dimensions ahs been dropped and we are reduced to 3 dimensions from  the original 4.**
+
+**Now we can proceed to build the recommender.**
+
+```{r}
+rec=Recommender(rating_matrix[1:nrow(rating_matrix)],method="UBCF", param=list(normalize = "Z-score",method="Cosine",nn=5))
+
+#We can now proceed to build the recommender model.
+print(rec)
+names(getModel(rec))
+getModel(rec)$nn
+recom <- predict(rec, rating_matrix[1:nrow(rating_matrix)], type="ratings")
+```
+
+
