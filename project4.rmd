@@ -1,0 +1,156 @@
+---
+title: "DATA 643 Project 4"
+author: "Burton Machado"
+date: "June 10, 2016"
+output: pdf_document
+---
+
+**We create a UBCF recommender system that incorporates a time based context in the form of days of the week. In this example we will rate the movies for users using existing ratings. We will first rate a movie m2 for user u1 using the ratings data for all days of the week. Next, we will rate the movie m2 for user u1 using just the ratings for Saturdays. Here we show that users who watch movies on weekends (specifically a Saturday) are more thorough and selective in their research and hence end up liking the movies that they watch. So we end up having a watch (>3) ratings with just Saturdays data than with data for the whole week. Users who watch movies throughout the week tend to just watch movies casually and their ratings are random. We will also see  that user u1 is more close to users u21 and u27, but this fact is obscured by the ratings data for other days of the week. When we use the ratings Data for just Saturdays, we bring this fact out. This will be seen in the similarity matrices that will be created, one with the ratings for the whole week and one for just the ratings for Saturdays. The code is modular and it is easy to use other days of the week and also other users and movies. Altogether we have 27 users and 25 movies.**
+
+**The data has been artifically created. It is contained in two files, one with the ratings per movie for each user and the other with the Day of the week that a particulat movie was rated by a particular user. The files are named 'my_movies_ratings.csv' and 'my_movies_context.csv'. These files are on github.**
+
+
+```{r warning=FALSE}
+library(knitr)
+
+getRatingsByDay <- function(day, df_input, df_context){
+  df_temp <- df_input[,2:ncol(df_input)]
+  df_temp[df_context[,2:ncol(df_context)] != day] <- NA
+  df_temp <- cbind(u=df_input[,1],df_temp)
+  return(df_temp)
+}
+
+get_similarity_matrix <- function(df_r, df_mc){
+  #Construct the similarity matrix
+  similarity_Matrix <- data.frame(names=df_r[1:nrow(df_r)-1,1])
+  for(i in 1:nrow(df_mc)){
+    temp <- c()
+    for(j in 1:nrow(df_mc)){
+      product <- sum(df_mc[i,1:(ncol(df_mc)-2)]*df_mc[j,1:(ncol(df_mc)-2)],na.rm = TRUE)/
+        (df_mc$distance[i]*df_mc$distance[j])
+      temp <- append(temp, product)
+    }
+    similarity_Matrix <- cbind(similarity_Matrix, temp)
+  }
+  names(similarity_Matrix)<-c('names', as.character(similarity_Matrix[,1]))
+  return(similarity_Matrix)
+}
+
+bind_user_means <- function(df_r){
+  userMeans <- c()
+  for(i in 1:nrow(df_r)){
+    rowWithoutNA <- df_r[i, 2:ncol(df_r)][!is.na(df_r[i, 2:ncol(df_r)])]
+    userMeans <- append(userMeans, round(mean(rowWithoutNA), 2))
+  }
+  df_r <- cbind(df_r, userMeans)
+  return(df_r)
+}
+
+bind_movie_means <- function(df_r){
+  movieMeans <- c(NA)
+  for(i in 2:ncol(df_r)){
+    colWithoutNA <- df_r[,i][!is.na(df_r[,i])]
+    movieMeans <- append(movieMeans, round(mean(colWithoutNA), 2))
+  }
+  df_r <- rbind(df_r, movieMeans)
+  df_r[nrow(df_r),1] <- 'movieMeans'
+  return(df_r)
+}
+
+get_mean_centered <- function(df_r){
+  df_Mean_Centered <- df_r[,2:ncol(df_ratings)]-df_r$userMeans
+  df_Mean_Centered <- df_Mean_Centered[,1:ncol(df_Mean_Centered)-1]
+  df_Mean_Centered <- df_Mean_Centered[1:nrow(df_Mean_Centered)-1,]
+  return(df_Mean_Centered)
+}
+
+get_distance <- function(df_r, df_mc){
+  distance <- c()
+  for( i in 1:nrow(df_mc)){
+    distance <- append(distance, sum(df_mc[i,]**2, na.rm = TRUE)**.5)
+  }
+  #Create mean centered data frame with the distance
+  df_Mean_Centered_and_Distance <- cbind(df_mc, distance)
+  df_Mean_Centered_and_Distance <- cbind(df_Mean_Centered_and_Distance, userMeans=df_r$userMeans[1:length(df_r$userMeans)-1])
+  return(df_Mean_Centered_and_Distance)
+}
+```
+
+```{r}
+# Please set the working directory to the location of  the 'Project_1.csv' file.
+setwd('/Users/burton/001-Semester_05_CUNY/643_Recommender_Systems/Week_04')
+# Create a data frame from the csv file.
+df_ratings <- read.csv('my_movies_ratings.csv', header = TRUE, stringsAsFactors = FALSE)
+df_context <- read.csv('my_movies_context.csv', header = TRUE, stringsAsFactors = FALSE,na.strings = c(""))
+df_ratings_sat <- getRatingsByDay('Sat', df_ratings, df_context)
+
+#Get the ratings for all days of the Week
+head(df_ratings)
+
+#Get the days of the week for each rating
+head(df_context)
+
+#Get the ratings for Saturday only.
+head(df_ratings_sat)
+
+# Here we will calculate the user means and bind them to the data frame
+df_ratings <- bind_user_means(df_ratings)
+df_ratings_sat <- bind_user_means(df_ratings_sat)
+
+# Here we will calculate the movie means and bind them to the data frame
+df_ratings <- bind_movie_means(df_ratings)
+df_ratings_sat <- bind_movie_means(df_ratings_sat)
+
+# Print the dataframe along with the user-means and movie-means
+df_ratings
+df_ratings_sat
+
+# We now calculate the mean-centered values and create another dataframe.
+df_Mean_Centered <- get_mean_centered(df_ratings)
+df_Mean_Centered_sat <- get_mean_centered(df_ratings_sat)
+
+# Print the mean-centered dataframe in a table.
+#kable(df_Mean_Centered)
+
+# Calculate the distances
+df_Mean_Centered_and_Distance <- get_distance(df_ratings, df_Mean_Centered)
+df_Mean_Centered_and_Distance_sat <- get_distance(df_ratings_sat, df_Mean_Centered_sat)
+
+# Print  dataframes along with the mean centered values and distance
+df_Mean_Centered_and_Distance
+df_Mean_Centered_and_Distance_sat
+
+#Construct the similarity matrix
+similarity_Matrix_whole <- get_similarity_matrix(df_ratings, df_Mean_Centered_and_Distance)
+similarity_Matrix_sat <- get_similarity_matrix(df_ratings_sat, df_Mean_Centered_and_Distance_sat)
+
+#Print the similarity matrices for Whole week and just Saturdays
+similarity_Matrix_whole
+similarity_Matrix_sat
+
+df_Mean_Centered_and_Distance <- cbind(Reviewer=df_ratings[1:(nrow(df_ratings)-1),1],df_Mean_Centered_and_Distance)
+
+
+similarity_u1 <- sort(similarity_Matrix_whole$u1,decreasing = TRUE)
+
+similarity_u1_sat <- sort(similarity_Matrix_sat$u1,decreasing = TRUE)
+
+# We will rate movie m2 for user u1
+# The two most similar for user u1 are u3 (0.95324788) and u5(0.89070487). The weights for u3 is -1.50 and for u5 is -2.42. The mean rating of u1 for m2 is 2
+rating_u1_m2 <- ((0.95324788*(-1.50) + 0.89070487*(-2.42))/(0.95324788+0.89070487)) + 3.64
+
+#We will rate movie m2 for user u1 just using the Saturday ratings
+# The two most similar for user u1 (for Saturday) are u21 (0.35354897) and u27(0.176774486). The weights for u21 is 0.67 and for u27 is -0.33. The mean rating of  for m2 is 1.5
+rating_u1_m2_sat <- ((0.35354897*(0.67) + 0.176774486*(-0.33))/(0.35354897+0.176774486)) + 4.50
+
+#Print the rating for user u1 on  movie m2 taking all days of the week into context.
+rating_u1_m2
+#Print the rating for user u1 on  movie m2 taking only Saturdays into context.
+rating_u1_m2_sat
+```
+
+**We can observe that the rating for user u1 for movie m2 is `r round(rating_u1_m2, 2)` if the whole weeks ratings data is used.**
+
+**We can observe that the rating for user u1 for movie m2 is `r round(rating_u1_m2_sat, 2)` if only Saturdays ratings data is used.**
+
+**Also users u3 and u5 obscure the proximity of users u21 and u27 who are actually more close to user u1 in terms of weekend ratings similarity. This fact is brought about by the higer rating that u1 gets when we just use Saturdays ratings data. Users u21 and u27 in our data are actually real weekend users if we check the raw ratings data. So the ratings prediction changes from a low to high when we switch to Saturdays data.**
