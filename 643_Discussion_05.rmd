@@ -1,0 +1,11 @@
+---
+title: "643 Discussion 5"
+author: "Burton Machado"
+output: pdf_document
+---
+
+**We describe a new recommender system that utilizes a social network.**
+
+**The primary focus for a social recommender system is normally on the existence of homophily among friends. This could be analyzed using the ratings data for items that are rated by the users. The items here could be anything ranging from similar photographs to likes on similar items. We could also develop a recommender system that utilizes a social network and analyses more information in the social network like user preferences, homophily even from friends that are multiple hops away. So we can use immediate friend inference and distant friend inference schemes. We can also take into consideration trust issues created by malicious users and users with insufficient knowledge of the social network to weight and estimate the homophily more accurately. Integration with other social based networks could also be undertaken to increase the accuracy of recommendations. We could also use data from restaurants to check if certain users like the same foods. Integration with other systems to increase recommendation accuracy seems to be the way to go in the future. Successful social network sites tend to be unique and humongous, so it is impossible to replicate the data that they generate to another site. Also, each site has data that is unique to its personality and hence integration with other sites also increases the variety of data.**
+
+**The primary technology that is used for network recommender systems are graph data bases and their analogues.  These are used to gauge the closeness of relationships between users. Noe4j is one such graph database.**
